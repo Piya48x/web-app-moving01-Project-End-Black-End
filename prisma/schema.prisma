@@ -1,0 +1,83 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// model Driver {
+//   id            Int      @id @default(autoincrement())
+//   user          String   @unique
+//   email         String   @unique
+//   password      String
+//   brand         String
+//   colorCar      String
+//   licensePlate  String
+//   phoneNumber   String
+//   firstName     String
+//   lastName      String
+//   typeCar       String
+// }
+
+// กำหนดโมเดลของลูกค้า (customers)
+model Customer {
+  id          Int      @id @default(autoincrement())
+  user        String
+  email       String
+  password    String
+  phoneNumber String
+  address     String
+
+  // กำหนดว่า user และ email จะต้องไม่ซ้ำกัน
+  @@unique([user, email])
+}
+
+model User {
+  id          Int      @id @default(autoincrement())
+  user        String
+  email       String   @unique
+  password    String
+  brand       String?
+  colorCar    String?
+  licensePlate String?
+  phoneNumber String?
+  firstName   String?
+  lastName    String?
+  typeCar     String?
+}
+
+model Admin {
+  id       Int      @id @default(autoincrement())
+  email    String   @unique
+  password String
+}
+
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  email     String
+  createdAt DateTime @default(now())
+}
+
+model resetToken {
+  id        Int      @id @default(autoincrement())
+  email     String
+  token     String
+}
+
+model Order {
+  id              Int      @id @default(autoincrement())
+  pickupLocation  String
+  destination     String
+  selectedVehicle String
+}
+
+
+
+
+
+

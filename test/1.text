@@ -1,0 +1,188 @@
+// app.post('/api/register', async (req, res) => {
+//   try {
+//     const { email, password } = req.body;
+
+//     // Save user data to the database
+//     const newUser = await prisma.user.create({
+//       data: {
+//         email,
+//         password,
+//       },
+//     });
+
+//     res.status(201).json({ message: 'User registered successfully', data: newUser });
+//   } catch (error) {
+//     console.error('Error registering user:', error);
+//     res.status(500).json({ message: 'Internal server error' });
+//   }
+// });
+
+//--------------------------------------------------------------------
+
+//--------------------------------------------------------------------------------------------------
+
+// app.post("/api/register", async (req, res) => {
+//   try {
+//     const {
+// user,
+// email,
+// password,
+// brand,
+// colorCar,
+// licensePlate,
+// phoneNumber,
+// firstName,
+// lastName,
+// typeCar,
+//     } = req.body;
+
+//     // เก็บข้อมูลลงในฐานข้อมูล MySQL ผ่าน Prisma
+//     const newDriver = await prisma.driver.create({
+//       data: {
+//         user,
+//         email,
+//         password,
+//         brand,
+//         colorCar,
+//         licensePlate,
+//         phoneNumber,
+//         firstName,
+//         lastName,
+//         typeCar,
+//       },
+//     });
+
+//     res
+//       .status(201)
+//       .json({ message: "Driver registered successfully", data: newDriver });
+//   } catch (error) {
+//     console.error("Error registering driver:", error);
+//     res.status(500).json({ message: "Internal server error" });
+//   }
+// });
+
+//------------------------------------------------------
+
+//---------------------------------------------------
+
+// // Register customer endpoint
+// app.post("/api/register-customer", async (req, res) => {
+//   try {
+//     const { email, password } = req.body;
+
+//     // Save customer data to the database
+
+//     const newCustomer = await prisma.customer.create({
+//       data: {
+//         email,
+//         password,
+//       },
+//     });
+
+//     res.status(201).json({ message: "Customer registered successfully", data: newCustomer });
+//   } catch (error) {
+//     console.error("Error registering customer:", error);
+//     res.status(500).json({ message: "Internal server error" });
+//   }
+// });
+
+//-----------------------------
+//------------------------------------
+// // Login endpoint
+// app.post("/api/login", async (req, res) => {
+//   try {
+//     const { email, password } = req.body;
+
+//     // Check if the user exists with the provided email
+//     const existingUser = await prisma.user.findUnique({
+//       where: {
+//         email,
+//       },
+//     });
+
+//     // If user doesn't exist or password doesn't match, return an error
+//     if (!existingUser || existingUser.password !== password) {
+//       return res.status(401).json({ message: "Invalid email or password" });
+//     }
+
+//     // If everything is correct, return a success message
+//     res.status(200).json({ message: "Login successful", data: existingUser });
+//   } catch (error) {
+//     console.error("Error logging in:", error);
+//     res.status(500).json({ message: "Internal server error" });
+//   }
+// });
+
+
+// Nodemailer transporter setup
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: "pdpd4650z@gmail.com", // Enter your Gmail email address
+    pass: "$2b$10$7IuHwxFsIz2eD3/trS9xS./z2GPMZBW5U17C9NSEF90V5yD9uHKzK", // Enter your Gmail password
+  },
+});
+
+// Function to send password reset email
+const sendPasswordResetEmail = async (email, token) => {
+  const mailOptions = {
+    from: "pdpd4650z@gmail.com",
+    to: email,
+    subject: "Password Reset",
+    text: `To reset your password, click on the following link: http://localhost:5173/reset-password/${token}`,
+  };
+
+  return new Promise((resolve, reject) => {
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error("Error sending email:", error);
+        reject(error);
+      } else {
+        console.log("Email sent:", info.response);
+        resolve(info);
+      }
+    });
+  });
+};
+
+// Backend Endpoint to Handle Password Reset Request
+app.post("/api/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Check if the user with the provided email exists
+    const user = await prisma.user.findUnique({
+      where: {
+        email,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Generate a unique token for password reset
+    const token = generateUniqueToken(); // Implement this function to generate a unique token
+
+    // Save the token in the database or associate it with the user's email
+    await prisma.passwordResetToken.create({
+      data: {
+        token,
+        email,
+      },
+    });
+
+    // Send an email containing the password reset link with the token
+    await sendPasswordResetEmail(email, token);
+
+    return res.status(200).json({ message: "Password reset instructions sent to your email" });
+  } catch (error) {
+    console.error("Error resetting password:", error);
+    return res.status(500).json({ message: "Failed to send password reset instructions" });
+  }
+});
+
+// Helper function to generate unique token
+function generateUniqueToken() {
+  // Generate token logic here
+}

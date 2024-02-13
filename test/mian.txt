@@ -1,0 +1,242 @@
+// server.js
+const express = require("express");
+const { PrismaClient } = require("@prisma/client");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+
+const prisma = new PrismaClient();
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(express.json());
+
+// Enable CORS
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "http://localhost:5173"); // แก้ไข URL เป็นโดเมนของเว็บไซต์ React ของคุณ
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, POST, OPTIONS, PUT, PATCH, DELETE"
+  );
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Credentials", true);
+  next();
+});
+
+// Register a new user
+app.post("/api/register", async (req, res) => {
+  try {
+    const {
+      user,
+      email,
+      password, // รับรหัสผ่านที่ไม่ได้ถูกแฮชแล้ว
+      brand,
+      colorCar,
+      licensePlate,
+      phoneNumber,
+      firstName,
+      lastName,
+      typeCar,
+    } = req.body;
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10); // แฮชรหัสผ่านก่อนที่จะเก็บลงในฐานข้อมูล
+
+    // Save user data to the database
+    const newUser = await prisma.user.create({
+      data: {
+        user,
+        email,
+        password: hashedPassword, // เก็บรหัสผ่านที่ถูกแฮชแล้วลงในฐานข้อมูล
+        brand,
+        colorCar,
+        licensePlate,
+        phoneNumber,
+        firstName,
+        lastName,
+        typeCar,
+      },
+    });
+
+    res
+      .status(201)
+      .json({ message: "User registered successfully", data: newUser });
+  } catch (error) {
+    console.error("Error registering user:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+app.post("/api/register-customer", async (req, res) => {
+  try {
+    const { user, email, password, confirmPassword, phoneNumber, address } =
+      req.body;
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Check if the user already exists with the provided email
+    const existingUser = await prisma.user.findUnique({
+      where: {
+        email,
+      },
+    });
+
+    // If user already exists, return an error
+    if (existingUser) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+
+    // Create a new customer
+    const newCustomer = await prisma.customer.create({
+      data: {
+        user,
+        email,
+        password: hashedPassword,
+        phoneNumber,
+        address,
+      },
+    });
+
+    // If everything is correct, log in the customer
+    res.status(200).json({
+      message: "Customer registered and logged in successfully",
+      data: newCustomer,
+    });
+  } catch (error) {
+    console.error("Error registering customer:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// Register admin endpoint
+app.post("/api/register-admin", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Check if the admin already exists
+    const existingAdmin = await prisma.admin.findUnique({
+      where: {
+        email,
+      },
+    });
+
+    if (existingAdmin) {
+      return res.status(400).json({ message: "Admin already exists" });
+    }
+
+    // Save admin data to the database
+    const newAdmin = await prisma.admin.create({
+      data: {
+        email,
+        password: hashedPassword,
+      },
+    });
+
+    res
+      .status(201)
+      .json({ message: "Admin registered successfully", data: newAdmin });
+  } catch (error) {
+    console.error("Error registering admin:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// Login endpoint
+app.post("/api/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Check if the admin exists with the provided email and password
+    const existingAdmin = await prisma.admin.findFirst({
+      where: {
+        email,
+      },
+    });
+
+    if (existingAdmin) {
+      // If the user is an admin, compare passwords
+      const passwordMatch = await bcrypt.compare(
+        password,
+        existingAdmin.password
+      );
+      if (!passwordMatch) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+      // If password matches, generate admin token
+      const token = jwt.sign(
+        { userId: existingAdmin.id },
+        process.env.SECRET_KEY
+      );
+      // If password matches, return admin data along with token
+      return res.status(200).json({
+        message: "Admin login successful",
+        token,
+        data: existingAdmin,
+      });
+    }
+
+    // Check if the customer exists with the provided email and password
+    const existingCustomer = await prisma.customer.findFirst({
+      where: {
+        email,
+      },
+    });
+
+    if (existingCustomer) {
+      // If the user is a customer, compare passwords
+      const passwordMatch = await bcrypt.compare(
+        password,
+        existingCustomer.password
+      );
+      if (!passwordMatch) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+      // If password matches, generate customer token
+      const token = jwt.sign(
+        { userId: existingCustomer.id },
+        process.env.SECRET_KEY
+      );
+      // If password matches, return customer data along with token
+      return res.status(200).json({
+        message: "Customer login successful",
+        token,
+        data: existingCustomer,
+      });
+    }
+
+    // Check if the user exists with the provided email
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        email,
+      },
+    });
+
+    if (!existingUser) {
+      // If no user, admin, or customer exists with the provided email, return an error
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    // Compare passwords for regular user
+    const passwordMatch = await bcrypt.compare(password, existingUser.password);
+    if (!passwordMatch) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    // If the user is a regular user and password matches, generate user token
+    const token = jwt.sign({ userId: existingUser.id }, process.env.SECRET_KEY);
+    // If password matches, return user data along with token
+    res.status(200).json({
+      message: "User login successful",
+      token,
+      data: existingUser,
+    });
+  } catch (error) {
+    console.error("Error logging in:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
