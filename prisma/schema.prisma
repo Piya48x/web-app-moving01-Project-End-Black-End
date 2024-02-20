@@ -63,18 +63,36 @@ model PasswordResetToken {
   createdAt DateTime @default(now())
 }
 
-model resetToken {
-  id        Int      @id @default(autoincrement())
-  email     String
-  token     String
-}
+// model resetToken {
+//   id        Int      @id @default(autoincrement())
+//   email     String
+//   token     String
+// }
 
 model Order {
-  id              Int      @id @default(autoincrement())
-  pickupLocation  String
-  destination     String
-  selectedVehicle String
+  id                Int       @id @default(autoincrement())
+  vehicle           String
+  bookingStatus     String
+  pickupLocation    Json      // Stores location as JSON
+  dropoffLocation   Json      // Stores location as JSON
+  selectedDateTime  DateTime?
+  totalDistance     Float?    // Total distance in kilometers
+  totalCost         Float?    // Total cost in Baht
+  createdAt         DateTime  @default(now())
 }
+
+model Booking {
+  id                Int       @id @default(autoincrement())
+  vehicle           String
+  bookingStatus     String
+  pickupLocation    Json      // Stores location as JSON
+  dropoffLocation   Json      // Stores location as JSON
+  selectedDateTime  DateTime?
+  totalDistance     Float?    // Total distance in kilometers
+  totalCost         Float?    // Total cost in Baht
+  createdAt         DateTime  @default(now())
+}
+
 
 
 
