@@ -173,6 +173,25 @@ app.delete("/api/booking/:id", async (req, res) => {
   }
 });
 
+app.delete("/api/order/:id", async (req, res) => {
+  const orderId = req.params.id; // Extract the order ID from the request parameters
+
+  try {
+    // Delete the order with the specified ID from the database
+    await prisma.order.delete({
+      where: {
+        id: parseInt(orderId) // Assuming the order ID is an integer
+      }
+    });
+
+    res.status(200).json({ message: "Order deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting order:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+
 
 
 //Booking get
