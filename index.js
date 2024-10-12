@@ -8,6 +8,7 @@ const registerCustomerRouter = require("./contloRoue/registerCustomer");
 const registerAdminRouter = require("./contloRoue/registerAdmin");
 const loginRoutes = require("./contloRoue/loginRoutes");
 const resetPasswordRoutes = require("./contloRoue/resetPasswordRoutes");
+require('dotenv').config();
 
 const prisma = new PrismaClient();
 const app = express();
